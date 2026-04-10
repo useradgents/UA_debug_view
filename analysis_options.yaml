@@ -1,0 +1,21 @@
+include: package:flutter_lints/flutter.yaml
+
+analyzer:
+  exclude:
+    - "**/*.g.dart"
+
+linter:
+  rules:
+    avoid_dynamic_calls: true
+    avoid_slow_async_io: true
+    prefer_final_locals: true
+    prefer_const_constructors: true
+    prefer_const_declarations: true
+    prefer_const_literals_to_create_immutables: true
+    prefer_relative_imports: true
+    prefer_single_quotes: true
+    type_annotate_public_apis: true
+    always_put_required_named_parameters_first: true
+    avoid_classes_with_only_static_members: false
+    cascade_invocations: true
+    eol_at_end_of_file: true
