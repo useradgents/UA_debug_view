@@ -19,11 +19,13 @@ export 'src/domain/entities/debug_action.dart';
 export 'src/domain/entities/debug_toggle_action.dart';
 export 'src/domain/entities/test_account.dart';
 
+// In-form widgets
+export 'src/presentation/widgets/debug_account_picker.dart';
+
 // Built-in modules
 export 'src/presentation/modules/app_info/app_info_module.dart';
 export 'src/presentation/modules/environment/environment_module.dart';
 export 'src/presentation/modules/auth/auth_module.dart';
-export 'src/presentation/modules/test_accounts/test_accounts_module.dart';
 export 'src/presentation/modules/network/network_module.dart';
 export 'src/presentation/modules/logs/logs_module.dart';
 export 'src/presentation/modules/storage/storage_module.dart';

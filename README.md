@@ -2,7 +2,7 @@
 
 A fully modular, customizable Flutter debug panel by [UserAdgents](https://github.com/useradgents).
 
-Plug in only the modules you need — environment switcher, network inspector, logs console, test accounts, auth tokens, storage browser, and more. Zero configuration required to get started.
+Plug in only the modules you need — environment switcher, network inspector, logs console, auth tokens, storage browser, and more. Drop in `DebugAccountPicker` straight into your login form to pre-fill credentials. Zero configuration required to get started.
 
 ---
 
@@ -138,70 +138,69 @@ AuthModule(
 
 ---
 
-### TestAccountsModule
+### DebugAccountPicker
 
-List of test accounts with one-tap login. Filter accounts per environment automatically.
+A drop-in widget you place **inside your login form**. Tapping a test account fills your `TextEditingController`s — the user then submits using your normal "Sign in" button. Auto-hides outside debug builds.
+
+**Works standalone — no `DebugPanel` required.** Just drop it into the form and you're done.
 
 ```dart
-TestAccountsModule(
-  currentEnvironment: myEnvService.current,
-  accounts: [
-    // Email/password accounts
-    TestAccount.emailPassword(
-      label: 'Standard user',
-      email: 'user@dev.com',
-      password: '1234',
-      tags: ['loyalty', 'bronze'],
+// Anywhere convenient — alongside the screen, in a const file, etc.
+const _testAccounts = [
+  TestAccount(
+    id: 'user@dev.com',
+    password: '1234',
+    label: 'Standard user',
+    info: 'bronze loyalty',
+  ),
+  TestAccount(
+    id: 'admin@dev.com',
+    password: 'admin',
+    label: 'Dev-only admin',
+    info: 'full access',
+  ),
+  TestAccount(
+    id: '+33612345678',
+    password: '1234',
+    label: 'Phone login',
+  ),
+];
+
+// Inside your login screen's build():
+Column(
+  children: [
+    DebugAccountPicker(
+      accounts: _testAccounts,
+      onSelected: (acc) {
+        _idController.text = acc.id;
+        _passwordController.text = acc.password;
+      },
+      // accentColor: Colors.purple, // optional override
     ),
-    TestAccount.emailPassword(
-      label: 'Dev-only admin',
-      email: 'admin@dev.com',
-      password: 'admin',
-      environments: [devEnvironment], // only shown in DEV
-    ),
-    // Phone/password accounts
-    TestAccount.phonePassword(
-      label: '+33 6 12 34 56 78',
-      phone: '+33612345678',
-      password: '1234',
-      tags: ['premium'],
-    ),
+    TextField(controller: _idController),
+    TextField(controller: _passwordController, obscureText: true),
+    ElevatedButton(onPressed: _login, child: const Text('Sign in')),
   ],
-  onLogin: (account) async {
-    // credentials keys match the factory used ('email' or 'phone')
-    final phone = account.credentials['phone'];
-    final email = account.credentials['email'];
-    final password = account.credentials['password']!;
-    if (phone != null) {
-      await myAuth.loginWithPhone(phone, password);
-    } else {
-      await myAuth.loginWithEmail(email!, password);
-    }
-  },
 )
 ```
 
-For non email/password flows, use the raw constructor with a custom `credentials` map:
+`TestAccount` fields:
 
-```dart
-TestAccount(
-  label: 'SSO user',
-  credentials: {'token': 'abc123', 'tenant': 'acme'},
-  onLogin: ...
-)
-```
+| Field | Required | Purpose |
+|---|---|---|
+| `id` | yes | Identifier passed to your form (email, phone, username — whatever) |
+| `password` | yes | Password matching `id` |
+| `label` | no | Human-readable name (e.g. `"Alice — admin"`). Falls back to `id`. |
+| `info` | no | Free-form info shown below the label (e.g. `"Hybris ✓ · Comarch ✗"`) |
+| `environments` | no | Per-environment filter — see below. Only effective when wrapped by `DebugPanel`. |
 
-Add an optional `description` below the label, with an optional custom style:
+**Optional integration with `DebugPanel`** — if a `DebugPanel` happens to wrap your app, the picker automatically:
 
-```dart
-TestAccount.emailPassword(
-  label: 'Admin',
-  email: 'admin@dev.com',
-  password: 'secret',
-  description: 'Full access — use with care',
-  descriptionStyle: TextStyle(color: Colors.amber, fontSize: 11), // optional
-)
-```
+- inherits its `accentColor` (override with the `accentColor` prop on the picker if needed);
+- respects its `DebugVisibility` setting (e.g. `never` hides the picker too);
+- filters accounts by the active `DebugEnvironment` — accounts whose `environments` list is non-empty only show when one of those envs is active. Useful for `dev`-only or `staging`-only credentials.
+
+Without `DebugPanel`, all accounts are shown in debug builds (`environments` is ignored), and the default blue accent is used unless overridden.
 
 ---
 

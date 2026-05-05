@@ -1,73 +1,38 @@
-import 'package:flutter/material.dart';
 import 'debug_environment.dart';
 
-/// A test account usable in [TestAccountsModule].
+/// A test account usable in [DebugAccountPicker].
+///
+/// Drop a list of these into a `DebugAccountPicker` placed inside your
+/// login form — tapping an entry calls `onSelected` so you can fill your
+/// `TextEditingController`s, then the user submits the form themselves.
 class TestAccount {
-  /// Human-readable label shown in the list.
-  final String label;
+  /// Identifier used to log in (email, phone, username — whatever your form expects).
+  final String id;
 
-  /// Optional description shown below the label.
-  final String? description;
+  /// Password matching [id].
+  final String password;
 
-  /// Custom style for [description]. Defaults to white 12sp if not provided.
-  final TextStyle? descriptionStyle;
+  /// Optional human-readable name shown as the main line (e.g. "Alice — admin").
+  /// Falls back to [id] when null.
+  final String? label;
 
-  /// Arbitrary credential map (e.g. `{'email': '...', 'password': '...'}`).
-  final Map<String, String> credentials;
+  /// Optional free-form info displayed below the label (e.g. "bronze loyalty",
+  /// "Hybris ✓ Comarch ✗"). Purely informational — not used by the picker logic.
+  final String? info;
 
-  /// If non-empty, the account only appears when the active environment
-  /// matches one of these entries. Pass empty list to always show.
+  /// If non-empty, restricts the account to specific environments. Only
+  /// effective when a surrounding `DebugPanel` exposes a current
+  /// [DebugEnvironment] — the picker will then hide accounts whose
+  /// [environments] list does not include the active env.
+  ///
+  /// Without a `DebugPanel`, this field is ignored (account always visible).
   final List<DebugEnvironment> environments;
 
-  /// Optional tags displayed as chips (e.g. 'bronze', 'loyalty').
-  final List<String> tags;
-
   const TestAccount({
-    required this.label,
-    this.description,
-    this.descriptionStyle,
-    required this.credentials,
+    required this.id,
+    required this.password,
+    this.label,
+    this.info,
     this.environments = const [],
-    this.tags = const [],
   });
-
-  /// Convenience constructor for the common email/password pattern.
-  factory TestAccount.emailPassword({
-    required String label,
-    required String email,
-    required String password,
-    String? description,
-    TextStyle? descriptionStyle,
-    List<DebugEnvironment> environments = const [],
-    List<String> tags = const [],
-  }) {
-    return TestAccount(
-      label: label,
-      description: description,
-      descriptionStyle: descriptionStyle,
-      credentials: {'email': email, 'password': password},
-      environments: environments,
-      tags: tags,
-    );
-  }
-
-  /// Convenience constructor for the common phone/password pattern.
-  factory TestAccount.phonePassword({
-    required String label,
-    required String phone,
-    required String password,
-    String? description,
-    TextStyle? descriptionStyle,
-    List<DebugEnvironment> environments = const [],
-    List<String> tags = const [],
-  }) {
-    return TestAccount(
-      label: label,
-      description: description,
-      descriptionStyle: descriptionStyle,
-      credentials: {'phone': phone, 'password': password},
-      environments: environments,
-      tags: tags,
-    );
-  }
 }

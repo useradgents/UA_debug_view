@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:package_info_plus/package_info_plus.dart';
+
 import '../../../core/widgets/debug_bottom_sheet_scaffold.dart';
 import '../../../core/widgets/debug_info_row.dart';
 import '../../../core/widgets/debug_section.dart';
@@ -19,12 +20,7 @@ class AppInfoModule extends DebugModule {
   /// Extra key/value pairs to display (e.g. git SHA, build date).
   final Map<String, String> extras;
 
-  const AppInfoModule({
-    this.version,
-    this.buildNumber,
-    this.bundleId,
-    this.extras = const {},
-  });
+  const AppInfoModule({this.version, this.buildNumber, this.bundleId, this.extras = const {}});
 
   @override
   String get title => 'App Info';
@@ -81,9 +77,7 @@ class _AppInfoPageState extends State<_AppInfoPage> {
         if (widget.module.extras.isNotEmpty)
           DebugSection(
             title: 'Build Info',
-            children: widget.module.extras.entries
-                .map((e) => DebugInfoRow(label: e.key, value: e.value))
-                .toList(),
+            children: widget.module.extras.entries.map((e) => DebugInfoRow(label: e.key, value: e.value)).toList(),
           ),
       ],
     );

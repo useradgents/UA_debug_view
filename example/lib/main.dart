@@ -46,109 +46,192 @@ class ExampleApp extends StatefulWidget {
 class _ExampleAppState extends State<ExampleApp> {
   DebugEnvironment _currentEnv = _environments.first;
 
-  List<DebugModule> get _modules => [
-        TestAccountsModule(
-          currentEnvironment: _currentEnv,
-          accounts: [
-            TestAccount(
-              label: 'Alice (admin)',
-              credentials: {'email': 'alice@example.com', 'password': 'admin123'},
-              tags: ['admin'],
-            ),
-            TestAccount(
-              label: 'Bob (user)',
-              credentials: {'email': 'bob@example.com', 'password': 'user456'},
-              tags: ['user'],
-            ),
-            TestAccount(
-              label: 'Dev only account',
-              credentials: {'email': 'dev@example.com', 'password': 'dev789'},
-              environments: [_environments[0]], // DEV uniquement
-              tags: ['dev'],
-            ),
-          ],
-          onLogin: (account) async {
-            await Future<void>.delayed(const Duration(milliseconds: 800));
-            DebugLogger.i(
-              'Logged in as ${account.label}',
-              tag: 'Auth',
-            );
-          },
+  @override
+  Widget build(BuildContext context) {
+    return DebugPanel(
+      // ── Global ───────────────────────────────────────────────────────────
+      accentColor: const Color(0xFF0A84FF),
+
+      // ── Environments ─────────────────────────────────────────────────────
+      environments: _environments,
+      currentEnvironment: _currentEnv,
+      onEnvironmentSwitch: (env) async {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        if (mounted) setState(() => _currentEnv = env);
+      },
+
+      // ── Auth ─────────────────────────────────────────────────────────────
+      accessToken: () => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example',
+      refreshToken: () => 'refresh_token_example_xyz',
+      tokenExpiry: () => DateTime.now().add(const Duration(minutes: 42)),
+      authAdditionalInfo: {
+        'User ID': () => '42',
+        'Email': () => 'alice@example.com',
+        'Role': () => 'admin',
+      },
+      onLogout: () async {
+        await Future<void>.delayed(const Duration(milliseconds: 500));
+        DebugLogger.w('User logged out', tag: 'Auth');
+      },
+
+      // ── Network ──────────────────────────────────────────────────────────
+      networkIgnoredPaths: const ['/health'],
+
+      // ── Storage ──────────────────────────────────────────────────────────
+      storageSensitiveKeys: const ['token', 'password'],
+
+      // ── Actions ──────────────────────────────────────────────────────────
+      debugActions: [
+        DebugAction(
+          label: 'Emit info log',
+          icon: Icons.info_outline,
+          onTap: () async => DebugLogger.i('Hello from action!', tag: 'Example'),
         ),
-        AppInfoModule(),
-        EnvironmentModule(
-          environments: _environments,
-          currentEnvironment: _currentEnv,
-          onSwitch: (env) async {
-            await Future<void>.delayed(const Duration(milliseconds: 500));
-            if (mounted) setState(() => _currentEnv = env);
-          },
+        DebugAction(
+          label: 'Emit error log',
+          icon: Icons.error_outline,
+          onTap: () async => DebugLogger.e('Something went wrong', tag: 'Example'),
         ),
-        AuthModule(
-          accessToken: () => 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example',
-          refreshToken: () => 'refresh_token_example_xyz',
-          tokenExpiry: () => DateTime.now().add(const Duration(minutes: 42)),
-          additionalInfo: {
-            'User ID': () => '42',
-            'Email': () => 'alice@example.com',
-            'Role': () => 'admin',
-          },
-          onLogout: () async {
-            await Future<void>.delayed(const Duration(milliseconds: 500));
-            DebugLogger.w('User logged out', tag: 'Auth');
-          },
+      ],
+
+      // ── Design System ────────────────────────────────────────────────────
+      designSystemSections: [
+        DesignSystemSection(
+          title: 'Colors',
+          builder: (_) => const _ColorsPreview(),
         ),
-        NetworkModule(ignoredPaths: const ['/health']),
-        LogsModule(),
-        StorageModule(sensitiveKeys: const ['token', 'password']),
-        ActionsModule(
-          actions: [
-            DebugAction(
-              label: 'Emit info log',
-              icon: Icons.info_outline,
-              onTap: () async => DebugLogger.i('Hello from action!', tag: 'Example'),
-            ),
-            DebugAction(
-              label: 'Emit error log',
-              icon: Icons.error_outline,
-              onTap: () async => DebugLogger.e('Something went wrong', tag: 'Example'),
-            ),
-          ],
+        DesignSystemSection(
+          title: 'Typography',
+          builder: (_) => const _TypographyPreview(),
         ),
-        DesignSystemModule(
-          sections: [
-            DesignSystemSection(
-              title: 'Colors',
-              builder: (_) => const _ColorsPreview(),
-            ),
-            DesignSystemSection(
-              title: 'Typography',
-              builder: (_) => const _TypographyPreview(),
-            ),
-          ],
-        ),
+      ],
+
+      // ── Extra custom modules ─────────────────────────────────────────────
+      extraModules: [
         CustomModule(
           title: 'Feature Flags',
           icon: Icons.flag_outlined,
           builder: (_) => const _FeatureFlagsPage(),
         ),
-      ];
+      ],
 
-  @override
-  Widget build(BuildContext context) {
-    return DebugPanel(
-      modules: _modules,
       child: MaterialApp(
         title: 'ua_debug_view Example',
         theme: ThemeData.dark(useMaterial3: true),
-        home: const _HomePage(),
+        home: const _LoginScreen(),
       ),
     );
   }
 }
 
 // ---------------------------------------------------------------------------
-// Home page
+// Login screen — shows how to use DebugAccountPicker inside a real form
+// ---------------------------------------------------------------------------
+
+// Test accounts can live wherever you want — here, alongside the screen that
+// uses them. You can also `const`-extract them into their own file, or build
+// the list dynamically. The package doesn't care.
+final _testAccounts = <TestAccount>[
+  const TestAccount(
+    id: 'alice@example.com',
+    password: 'admin123',
+    label: 'Alice',
+    info: 'admin · bronze loyalty',
+  ),
+  const TestAccount(
+    id: 'bob@example.com',
+    password: 'user456',
+    label: 'Bob',
+    info: 'standard user',
+  ),
+  TestAccount(
+    id: 'dev@example.com',
+    password: 'dev789',
+    label: 'Dev only',
+    info: 'shows in DEV environment only',
+    environments: [_environments[0]],
+  ),
+];
+
+class _LoginScreen extends StatefulWidget {
+  const _LoginScreen();
+
+  @override
+  State<_LoginScreen> createState() => _LoginScreenState();
+}
+
+class _LoginScreenState extends State<_LoginScreen> {
+  final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _login() {
+    DebugLogger.i('Login submitted: ${_emailController.text}', tag: 'Auth');
+    Navigator.of(context).push(MaterialPageRoute<void>(
+      builder: (_) => const _HomePage(),
+    ));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: const Text('Sign in')),
+      body: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          children: [
+            const SizedBox(height: 16),
+
+            // ── The picker — drop-in, reads accounts from props ──────────
+            // Auto-hides outside debug builds and respects current env.
+            DebugAccountPicker(
+              accounts: _testAccounts,
+              onSelected: (account) {
+                _emailController.text = account.id;
+                _passwordController.text = account.password;
+              },
+            ),
+
+            // ── Regular form ─────────────────────────────────────────────
+            TextField(
+              controller: _emailController,
+              decoration: const InputDecoration(
+                labelText: 'Email',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: _passwordController,
+              obscureText: true,
+              decoration: const InputDecoration(
+                labelText: 'Password',
+                border: OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 16),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _login,
+                child: const Text('Se connecter'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Home page (post-login)
 // ---------------------------------------------------------------------------
 
 class _HomePage extends StatelessWidget {
