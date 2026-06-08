@@ -1,7 +1,9 @@
 import 'dart:async';
+import 'package:flutter/cupertino.dart' show DefaultCupertinoLocalizations;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import '../core/debug_panel_scope.dart';
+import '../data/network/debug_network_store.dart';
 import '../domain/entities/debug_action.dart';
 import '../domain/entities/debug_environment.dart';
 import '../domain/entities/debug_log.dart';
@@ -267,6 +269,13 @@ class _DebugPanelState extends State<DebugPanel> {
   @override
   void initState() {
     super.initState();
+    // Configure the network store up-front so ignored paths are dropped from
+    // the moment the app starts — before the page is ever opened — otherwise
+    // background traffic (e.g. connectivity checks) fills the buffer and evicts
+    // real requests.
+    DebugNetworkStore.instance
+      ..maxRequests = widget.networkMaxRequests
+      ..ignoredPaths = widget.networkIgnoredPaths;
     final modules = _buildModules();
     _modulesNotifier = ValueNotifier(modules);
     final env = _activeEnvironment;
@@ -309,6 +318,9 @@ class _DebugPanelState extends State<DebugPanel> {
             delegates: const [
               DefaultMaterialLocalizations.delegate,
               DefaultWidgetsLocalizations.delegate,
+              // Required so the iOS text-selection toolbar (Copy/Paste) on
+              // SelectableText can resolve its labels inside this overlay.
+              DefaultCupertinoLocalizations.delegate,
             ],
             child: _DebugFabOverlay(
               modulesNotifier: _modulesNotifier,

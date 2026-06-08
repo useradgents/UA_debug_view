@@ -1,9 +1,10 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:ua_debug_view/ua_debug_view.dart';
 
 void main() {
-  HttpOverrides.global = DebugHttpOverrides();
+  DebugView.enableNetworkCapture();
   runApp(const ExampleApp());
 }
 
@@ -190,6 +191,9 @@ class _LoginScreenState extends State<_LoginScreen> {
 
             // ── The picker — drop-in, reads accounts from props ──────────
             // Auto-hides outside debug builds and respects current env.
+            //
+            // `onSelected` is form-library agnostic. Here we use raw
+            // TextEditingControllers:
             DebugAccountPicker(
               accounts: _testAccounts,
               onSelected: (account) {
@@ -197,6 +201,28 @@ class _LoginScreenState extends State<_LoginScreen> {
                 _passwordController.text = account.password;
               },
             ),
+            // If you use flutter_form_builder instead, you don't need any
+            // controller — drive the fields straight from the form key:
+            //
+            //   onSelected: (account) {
+            //     final fields = _formKey.currentState?.fields;
+            //     fields?['email']?.didChange(account.id);
+            //     fields?['password']?.didChange(account.password);
+            //   },
+            //
+            // ── Prefer a bottom sheet? ───────────────────────────────────
+            // When the inline picker doesn't fit your layout (it lives in a
+            // Row, an unbounded-height context, …) use the button variant —
+            // the account list opens in its own route and never touches your
+            // form's layout:
+            //
+            //   DebugAccountPickerButton(
+            //     accounts: _testAccounts,
+            //     onSelected: (account) {
+            //       _emailController.text = account.id;
+            //       _passwordController.text = account.password;
+            //     },
+            //   ),
 
             // ── Regular form ─────────────────────────────────────────────
             TextField(
@@ -266,8 +292,14 @@ class _HomePage extends StatelessWidget {
             const SizedBox(height: 16),
             ElevatedButton.icon(
               icon: const Icon(Icons.send),
-              label: const Text('Fake network request'),
-              onPressed: _fakeRequest,
+              label: const Text('GET + POST request'),
+              onPressed: _realRequests,
+            ),
+            const SizedBox(height: 8),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.error_outline),
+              label: const Text('Failing request'),
+              onPressed: _failingRequest,
             ),
           ],
         ),
@@ -275,19 +307,46 @@ class _HomePage extends StatelessWidget {
     );
   }
 
-  void _fakeRequest() {
-    DebugLogger.d('Sending fake request…', tag: 'Network');
-    DebugNetworkStore.instance.add(
-      DebugNetworkRequest(
-        timestamp: DateTime.now(),
-        method: 'GET',
-        url: 'https://api.example.com/users/me',
-        statusCode: 200,
-        duration: const Duration(milliseconds: 142),
-        responseBody: '{"id": 1, "name": "John Doe"}',
-      ),
-    );
-    DebugLogger.i('Request complete — 200 OK', tag: 'Network');
+  // Real traffic through dart:io — captured automatically by DebugHttpOverrides.
+  Future<void> _realRequests() async {
+    DebugLogger.d('Sending requests…', tag: 'Network');
+    final client = HttpClient();
+    try {
+      // GET with a JSON response body.
+      final getReq = await client
+          .getUrl(Uri.parse('https://jsonplaceholder.typicode.com/users/1'));
+      final getResp = await getReq.close();
+      await getResp.transform(utf8.decoder).join();
+
+      // POST with a JSON request body.
+      final postReq = await client
+          .postUrl(Uri.parse('https://jsonplaceholder.typicode.com/posts'));
+      postReq.headers.contentType = ContentType.json;
+      postReq.write(jsonEncode({'title': 'foo', 'body': 'bar', 'userId': 1}));
+      final postResp = await postReq.close();
+      await postResp.transform(utf8.decoder).join();
+
+      DebugLogger.i('Requests complete', tag: 'Network');
+    } catch (e) {
+      DebugLogger.e('Request failed: $e', tag: 'Network');
+    } finally {
+      client.close();
+    }
+  }
+
+  // Hits an unresolvable host so the error path is captured.
+  Future<void> _failingRequest() async {
+    DebugLogger.d('Sending failing request…', tag: 'Network');
+    final client = HttpClient();
+    try {
+      final req = await client
+          .getUrl(Uri.parse('https://this-host-does-not-exist.invalid/data'));
+      await req.close();
+    } catch (e) {
+      DebugLogger.e('Expected failure: $e', tag: 'Network');
+    } finally {
+      client.close();
+    }
   }
 }
 

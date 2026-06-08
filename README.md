@@ -140,7 +140,9 @@ AuthModule(
 
 ### DebugAccountPicker
 
-A drop-in widget you place **inside your login form**. Tapping a test account fills your `TextEditingController`s — the user then submits using your normal "Sign in" button. Auto-hides outside debug builds.
+A drop-in widget you place **inside your login form**. Tapping a test account calls `onSelected` so you can fill your form fields — the user then submits using your normal "Sign in" button. Auto-hides outside debug builds.
+
+`onSelected` is **form-library agnostic** — it just hands you the `TestAccount`, you fill the fields however you like (see [Filling the fields](#filling-the-fields) below). Need a bottom sheet instead of an inline widget? See [As a bottom sheet](#as-a-bottom-sheet).
 
 **Works standalone — no `DebugPanel` required.** Just drop it into the form and you're done.
 
@@ -182,6 +184,54 @@ Column(
     ElevatedButton(onPressed: _login, child: const Text('Sign in')),
   ],
 )
+```
+
+#### Filling the fields
+
+`onSelected` doesn't assume any form library. Two common ways:
+
+```dart
+// 1. Raw TextEditingControllers
+onSelected: (acc) {
+  _idController.text = acc.id;
+  _passwordController.text = acc.password;
+},
+
+// 2. flutter_form_builder — no controller needed, drive the fields
+//    straight from the form key:
+onSelected: (acc) {
+  final fields = _formKey.currentState?.fields;
+  fields?['email']?.didChange(acc.id);
+  fields?['password']?.didChange(acc.password);
+},
+```
+
+#### As a bottom sheet
+
+When the inline widget doesn't fit your layout — it lives inside a `Row`, a horizontally-scrolling list, an `IntrinsicHeight`, or any context that doesn't give it a bounded height — rendering inline can break layout. Open the picker in a modal bottom sheet instead: the list lives in its own route with its own constraints, so it never touches your form's layout.
+
+Use the ready-made button (self-hides with the same rules as the inline picker):
+
+```dart
+DebugAccountPickerButton(
+  accounts: _testAccounts,
+  onSelected: (acc) {
+    _idController.text = acc.id;
+    _passwordController.text = acc.password;
+  },
+  // label: 'Pick a test account', // optional
+)
+```
+
+…or trigger the sheet yourself from any callback:
+
+```dart
+final picked = await DebugAccountPicker.showAsSheet(
+  context,
+  accounts: _testAccounts,
+  onSelected: (acc) { /* fill your fields */ },
+);
+// `picked` is the selected TestAccount, or null if dismissed.
 ```
 
 `TestAccount` fields:

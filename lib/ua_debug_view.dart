@@ -2,6 +2,7 @@
 library;
 
 // Core entry point
+export 'src/debug_view.dart';
 export 'src/presentation/debug_panel.dart';
 
 // Triggers

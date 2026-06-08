@@ -62,7 +62,7 @@ class _DebugNavBar extends StatelessWidget {
     return Container(
       height: 52,
       decoration: const BoxDecoration(
-        color: DebugColors.surface,
+        color: DebugColors.background,
         border: Border(
           bottom: BorderSide(color: DebugColors.border, width: 0.5),
         ),
