@@ -25,14 +25,19 @@ class DebugSection extends StatelessWidget {
             style: DebugTextStyles.sectionTitle,
           ),
         ),
-        Container(
-          decoration: BoxDecoration(
-            color: DebugColors.surface,
+        // A Material (not a decorated Container) so that ListTile-based
+        // children can paint their background and ink splashes on it.
+        Material(
+          color: DebugColors.surface,
+          shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: DebugColors.border, width: 0.5),
+            side: const BorderSide(color: DebugColors.border, width: 0.5),
           ),
-          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-          child: Column(children: children),
+          clipBehavior: Clip.antiAlias,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(children: children),
+          ),
         ),
         const SizedBox(height: 24),
       ],

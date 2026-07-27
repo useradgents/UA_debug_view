@@ -113,8 +113,7 @@ void main() {
 
   test('ignored paths are dropped before storage, so they never evict real '
       'traffic', () async {
-    final store = DebugNetworkStore.instance;
-    store
+    final store = DebugNetworkStore.instance
       ..ignoredPaths = ['/healthcheck']
       ..maxRequests = 2;
 

@@ -23,10 +23,11 @@ class DebugBottomSheet extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => DebugBottomSheet(
-        modulesNotifier: modulesNotifier,
-        accentColor: accentColor,
-      ),
+      builder:
+          (context) => DebugBottomSheet(
+            modulesNotifier: modulesNotifier,
+            accentColor: accentColor,
+          ),
     );
   }
 
@@ -37,37 +38,56 @@ class DebugBottomSheet extends StatefulWidget {
 class _DebugBottomSheetState extends State<DebugBottomSheet> {
   final _navigatorKey = GlobalKey<NavigatorState>();
 
+  /// Fixed dark theme applied to everything inside the sheet.
+  ///
+  /// The panel wraps the app's [MaterialApp], so the sheet renders outside the
+  /// app's [Theme]; without this, user-built content ([CustomModule] builders,
+  /// design-system sections, …) would fall back to Flutter's default light
+  /// theme and be unreadable on the panel's dark background.
+  ThemeData get _sheetTheme => ThemeData(
+    useMaterial3: true,
+    colorScheme: ColorScheme.fromSeed(
+      seedColor: widget.accentColor,
+      brightness: Brightness.dark,
+      surface: DebugColors.background,
+    ),
+    scaffoldBackgroundColor: DebugColors.background,
+  );
+
   @override
   Widget build(BuildContext context) {
     final screenHeight = MediaQuery.sizeOf(context).height;
 
-    return Container(
-      height: screenHeight * 0.88,
-      decoration: const BoxDecoration(
-        color: DebugColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
-      ),
-      child: Column(
-        children: [
-          // Handle indicator
-          Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10),
-            child: Container(
-              width: 36,
-              height: 4,
-              decoration: BoxDecoration(
-                color: DebugColors.border,
-                borderRadius: BorderRadius.circular(2),
+    return Theme(
+      data: _sheetTheme,
+      child: Container(
+        height: screenHeight * 0.88,
+        decoration: const BoxDecoration(
+          color: DebugColors.background,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        ),
+        child: Column(
+          children: [
+            // Handle indicator
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Container(
+                width: 36,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: DebugColors.border,
+                  borderRadius: BorderRadius.circular(2),
+                ),
               ),
             ),
-          ),
-          Expanded(
-            child: Navigator(
-              key: _navigatorKey,
-              onGenerateRoute: (settings) => _buildRoute(settings),
+            Expanded(
+              child: Navigator(
+                key: _navigatorKey,
+                onGenerateRoute: (settings) => _buildRoute(settings),
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -78,11 +98,12 @@ class _DebugBottomSheetState extends State<DebugBottomSheet> {
     if (settings.name == '/') {
       page = ValueListenableBuilder<List<DebugModule>>(
         valueListenable: widget.modulesNotifier,
-        builder: (_, modules, _) => _DebugMenuRoot(
-          modules: modules,
-          accentColor: widget.accentColor,
-          modulesNotifier: widget.modulesNotifier,
-        ),
+        builder:
+            (_, modules, _) => _DebugMenuRoot(
+              modules: modules,
+              accentColor: widget.accentColor,
+              modulesNotifier: widget.modulesNotifier,
+            ),
       );
     } else {
       final moduleTitle = (settings.arguments as DebugModule).title;
@@ -107,10 +128,9 @@ class _DebugBottomSheetState extends State<DebugBottomSheet> {
           position: Tween<Offset>(
             begin: const Offset(1, 0),
             end: Offset.zero,
-          ).animate(CurvedAnimation(
-            parent: animation,
-            curve: Curves.easeOutCubic,
-          )),
+          ).animate(
+            CurvedAnimation(parent: animation, curve: Curves.easeOutCubic),
+          ),
           child: child,
         );
       },
@@ -159,26 +179,29 @@ class _DebugMenuRoot extends StatelessWidget {
                           name: '/$moduleTitle',
                           arguments: module,
                         ),
-                        pageBuilder: (_, _, _) =>
-                            ValueListenableBuilder<List<DebugModule>>(
-                          valueListenable: modulesNotifier,
-                          builder: (ctx, freshModules, _) {
-                            final fresh = freshModules.firstWhere(
-                              (m) => m.title == moduleTitle,
-                              orElse: () => module,
-                            );
-                            return fresh.buildPage(ctx);
-                          },
-                        ),
+                        pageBuilder:
+                            (_, _, _) =>
+                                ValueListenableBuilder<List<DebugModule>>(
+                                  valueListenable: modulesNotifier,
+                                  builder: (ctx, freshModules, _) {
+                                    final fresh = freshModules.firstWhere(
+                                      (m) => m.title == moduleTitle,
+                                      orElse: () => module,
+                                    );
+                                    return fresh.buildPage(ctx);
+                                  },
+                                ),
                         transitionsBuilder: (_, animation, _, child) {
                           return SlideTransition(
                             position: Tween<Offset>(
                               begin: const Offset(1, 0),
                               end: Offset.zero,
-                            ).animate(CurvedAnimation(
-                              parent: animation,
-                              curve: Curves.easeOutCubic,
-                            )),
+                            ).animate(
+                              CurvedAnimation(
+                                parent: animation,
+                                curve: Curves.easeOutCubic,
+                              ),
+                            ),
                             child: child,
                           );
                         },

@@ -29,6 +29,7 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.8
+  shared_preferences: ^2.5.5
   ua_debug_view:
     path: ../
 

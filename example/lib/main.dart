@@ -1,11 +1,23 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:ua_debug_view/ua_debug_view.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   DebugView.enableNetworkCapture();
+  await _seedDemoPrefs();
   runApp(const ExampleApp());
+}
+
+// Seed a few SharedPreferences keys so the Storage module has content to
+// browse — 'token' demonstrates sensitive-key masking.
+Future<void> _seedDemoPrefs() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('token', 'secret_demo_token_abc123');
+  await prefs.setBool('onboarding_done', true);
+  await prefs.setInt('launch_count', (prefs.getInt('launch_count') ?? 0) + 1);
 }
 
 // ---------------------------------------------------------------------------
@@ -53,6 +65,9 @@ class _ExampleAppState extends State<ExampleApp> {
       // ── Global ───────────────────────────────────────────────────────────
       accentColor: const Color(0xFF0A84FF),
 
+      // ── App Info ─────────────────────────────────────────────────────────
+      appInfoExtras: const {'Git SHA': 'a3f5c2d', 'Flavor': 'demo'},
+
       // ── Environments ─────────────────────────────────────────────────────
       environments: _environments,
       currentEnvironment: _currentEnv,
@@ -82,6 +97,15 @@ class _ExampleAppState extends State<ExampleApp> {
       storageSensitiveKeys: const ['token', 'password'],
 
       // ── Actions ──────────────────────────────────────────────────────────
+      debugToggles: [
+        DebugToggleAction(
+          label: 'Verbose logging',
+          icon: Icons.subject,
+          initialValue: false,
+          onToggle: (value) async =>
+              DebugLogger.i('Verbose logging: $value', tag: 'Example'),
+        ),
+      ],
       debugActions: [
         DebugAction(
           label: 'Emit info log',
@@ -246,7 +270,7 @@ class _LoginScreenState extends State<_LoginScreen> {
               width: double.infinity,
               child: ElevatedButton(
                 onPressed: _login,
-                child: const Text('Se connecter'),
+                child: const Text('Sign in'),
               ),
             ),
           ],
@@ -277,9 +301,10 @@ class _HomePage extends StatelessWidget {
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 32),
+            // Standalone triggers take an explicit modules list.
             DebugTrigger(
               tapCount: 5,
-              modules: const [],
+              modules: const [AppInfoModule(), NetworkModule()],
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
                 decoration: BoxDecoration(
