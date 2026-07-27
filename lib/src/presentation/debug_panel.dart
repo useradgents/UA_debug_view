@@ -373,7 +373,7 @@ class _DebugFabOverlayState extends State<_DebugFabOverlay> {
               children: [
                 ValueListenableBuilder<_EnvInfo>(
                   valueListenable: widget.envNotifier,
-                  builder: (_, env, __) => DebugFab(
+                  builder: (_, env, _) => DebugFab(
                     accentColor: widget.accentColor,
                     environmentTag: env.tag,
                     environmentColor: env.color,

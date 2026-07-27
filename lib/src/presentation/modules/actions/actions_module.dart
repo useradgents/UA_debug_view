@@ -105,6 +105,8 @@ class _ActionsPageState extends State<_ActionsPage> {
                 secondary: Icon(toggle.icon, size: 18, color: DebugColors.textPrimary),
                 title: Text(toggle.label, style: DebugTextStyles.label),
                 value: _toggleValues[toggle.label] ?? toggle.initialValue,
+                // activeColor kept (not activeThumbColor) to support Flutter < 3.35
+                // ignore: deprecated_member_use
                 activeColor: DebugColors.accentDefault,
                 onChanged: (value) => _onToggle(toggle, value),
               );

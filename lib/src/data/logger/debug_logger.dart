@@ -11,7 +11,7 @@ class DebugLogger {
 
   static final _controller = StreamController<DebugLog>.broadcast();
   static final List<DebugLog> _buffer = [];
-  static int _maxLogs = 500;
+  static const int _maxLogs = 500;
 
   /// Stream of all logs emitted via [log].
   static Stream<DebugLog> get stream => _controller.stream;

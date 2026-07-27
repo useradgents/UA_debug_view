@@ -10,8 +10,8 @@ Plug in only the modules you need — environment switcher, network inspector, l
 
 - **Draggable FAB** — floating bug button, visible in debug builds only by default
 - **Multiple triggers** — FAB, N-taps on any widget, long press, or shake
-- **10 built-in modules** — cover the most common debug needs out of the box
-- **Fully modular** — register only what you need, build your own with `CustomModule`
+- **9 built-in modules** — cover the most common debug needs out of the box
+- **Fully modular** — modules activate from the parameters you pass, build your own with `CustomModule`
 - **Self-contained** — fixed dark theme, no state management dependency, no generated code
 
 ---
@@ -22,39 +22,51 @@ Add the dependency:
 
 ```yaml
 dependencies:
-  ua_debug_view: ^0.0.1
+  ua_debug_view: ^1.0.0
 ```
 
-Wrap your `MaterialApp`:
+Wrap your `MaterialApp` — zero configuration needed, App Info, Network, Logs
+and Storage are active out of the box:
 
 ```dart
 void main() {
   runApp(
     DebugPanel(
-      modules: [
-        AppInfoModule(),
-        EnvironmentModule(...),
-      ],
       child: MaterialApp(...),
     ),
   );
 }
 ```
 
+The other modules activate automatically when you pass their parameters:
+
+```dart
+DebugPanel(
+  // Environment switcher
+  environments: [devEnv, stagingEnv, prodEnv],
+  currentEnvironment: _currentEnv,
+  onEnvironmentSwitch: (env) async => await myEnvService.switchTo(env),
+  // Auth inspector
+  accessToken: () => myAuth.accessToken,
+  onLogout: () async => await myAuth.logout(),
+  child: MaterialApp(...),
+)
+```
+
 ---
 
 ## Triggers
 
-Three ways to open the panel — combine them freely:
+Four ways to open the panel — combine them freely:
 
 ```dart
 // 1. Automatic draggable FAB (default)
-DebugPanel(modules: [...], child: MaterialApp(...))
+DebugPanel(child: MaterialApp(...))
 
 // 2. Tap N times on any widget (e.g. your logo)
 DebugTrigger(
   tapCount: 5,
-  modules: [...],
+  modules: [AppInfoModule(), NetworkModule()],
   child: MyLogoWidget(),
 )
 
@@ -65,6 +77,10 @@ DebugTrigger.longPress(modules: [...], child: MyWidget())
 DebugShakeTrigger(modules: [...], child: MyApp())
 ```
 
+Unlike `DebugPanel`, the standalone triggers take an explicit `modules:` list —
+construct the module classes directly (`AppInfoModule()`, `NetworkModule()`,
+`LogsModule()`, …).
+
 Control visibility per build mode:
 
 ```dart
@@ -73,7 +89,6 @@ DebugPanel(
   // DebugVisibility.debugAndProfile
   // DebugVisibility.always
   // DebugVisibility.never
-  modules: [...],
   child: MaterialApp(...),
 )
 ```
@@ -82,15 +97,23 @@ DebugPanel(
 
 ## Modules
 
+**Always active** with `DebugPanel`: App Info, Network, Logs, Storage.
+**Activated by their parameters**: Environment, Auth, Actions, Design System.
+**Custom modules** go in `extraModules`.
+
+Each module class is also public — construct it directly when using a
+standalone `DebugTrigger` / `DebugShakeTrigger`.
+
 ### AppInfoModule
 
-Displays version, build number, bundle ID, and any extra key/value pairs.
+Displays version, build number, and bundle ID (auto-read from
+`package_info_plus`), plus any extra key/value pairs:
 
 ```dart
-AppInfoModule()
-// Auto-reads version & bundle ID from package_info_plus.
-// Pass extras for additional build metadata:
-AppInfoModule(extras: {'Git SHA': 'a3f5c2', 'Built at': '2026-04-03'})
+DebugPanel(
+  appInfoExtras: {'Git SHA': 'a3f5c2', 'Built at': '2026-04-03'},
+  child: MaterialApp(...),
+)
 ```
 
 ---
@@ -100,7 +123,7 @@ AppInfoModule(extras: {'Git SHA': 'a3f5c2', 'Built at': '2026-04-03'})
 Switch between environments with a confirmation dialog. The active environment badge appears on the FAB automatically.
 
 ```dart
-EnvironmentModule(
+DebugPanel(
   environments: [
     DebugEnvironment(
       name: 'Development',
@@ -112,8 +135,9 @@ EnvironmentModule(
     DebugEnvironment(name: 'Production', tag: 'PROD', color: Colors.red),
   ],
   currentEnvironment: myEnvService.current,
-  onSwitch: (env) async => await myEnvService.switchTo(env),
-  showConfirmDialog: true, // default
+  onEnvironmentSwitch: (env) async => await myEnvService.switchTo(env),
+  environmentShowConfirmDialog: true, // default
+  child: MaterialApp(...),
 )
 ```
 
@@ -124,15 +148,16 @@ EnvironmentModule(
 Displays access token, refresh token, expiry, and user info. One-tap copy on any token. Optional logout button.
 
 ```dart
-AuthModule(
-  accessToken:  () => myAuth.accessToken,
+DebugPanel(
+  accessToken:  () => myAuth.accessToken,    // activates the module
   refreshToken: () => myAuth.refreshToken,   // optional
   tokenExpiry:  () => myAuth.expiry,         // optional, DateTime
-  additionalInfo: {
+  authAdditionalInfo: {
     'Email': () => myAuth.userEmail,
     'Role':  () => myAuth.role,
   },
   onLogout: () async => await myAuth.logout(), // optional
+  child: MaterialApp(...),
 )
 ```
 
@@ -261,16 +286,22 @@ Captures all HTTP requests and responses in a Charles Proxy-style list. Tap any 
 ```dart
 // Enable interception in main():
 void main() {
-  HttpOverrides.global = DebugHttpOverrides();
+  DebugView.enableNetworkCapture();
   runApp(...);
 }
 
-// Register the module:
-NetworkModule(
-  maxRequests: 100,
-  ignoredPaths: ['/healthcheck'],
+// Configure via DebugPanel (module is always active):
+DebugPanel(
+  networkMaxRequests: 100,
+  networkIgnoredPaths: ['/healthcheck'],
+  child: MaterialApp(...),
 )
 ```
+
+`enableNetworkCapture()` preserves and chains any `HttpOverrides` your app
+already installed (proxy, certificate pinning…), and calling it twice is a
+no-op. If you need lower-level control, install `DebugHttpOverrides` yourself:
+`HttpOverrides.global = DebugHttpOverrides()`.
 
 You can also add requests manually (useful with Dio or other clients):
 
@@ -296,14 +327,16 @@ Filterable log console with levels (verbose, debug, info, warning, error) and ta
 The recommended approach is to pipe your existing logger's stream — the panel stays a passive observer, with no coupling to your app code:
 
 ```dart
-LogsModule(logStream: myLogger.stream)
+DebugPanel(
+  logStream: myLogger.stream,
+  logsMaxEntries: 500, // default
+  child: MaterialApp(...),
+)
 ```
 
-If you don't have a logging infrastructure yet, `DebugLogger` is a built-in lightweight option:
+If you don't have a logging infrastructure yet, `DebugLogger` is a built-in lightweight option used as fallback when no `logStream` is provided:
 
 ```dart
-LogsModule(maxLogs: 500)
-
 // Emit logs from anywhere in your app:
 DebugLogger.v('Verbose message');
 DebugLogger.d('Debug message', tag: 'AUTH');
@@ -321,14 +354,15 @@ DebugLogger.e('Error occurred');
 Browse all SharedPreferences keys. Sensitive keys are masked automatically. Supports additional custom storage providers.
 
 ```dart
-StorageModule(
-  sensitiveKeys: ['token', 'password', 'secret'],
-  additionalStorages: [
+DebugPanel(
+  storageSensitiveKeys: ['token', 'password', 'secret'],
+  storageAdditional: [
     DebugStorageProvider(
       name: 'Secure Storage',
       read: () async => await mySecureStorage.readAll(),
     ),
   ],
+  child: MaterialApp(...),
 )
 ```
 
@@ -339,9 +373,9 @@ StorageModule(
 One-tap debug actions: clear cache, reset onboarding, trigger a crash, etc. Optional confirmation dialog per action. Toggle switches for boolean flags.
 
 ```dart
-ActionsModule(
+DebugPanel(
   // Toggle switches — shown in a dedicated "Toggles" section
-  toggles: [
+  debugToggles: [
     DebugToggleAction(
       label: 'Dark mode',
       icon: Icons.dark_mode_outlined,
@@ -356,7 +390,7 @@ ActionsModule(
     ),
   ],
   // Buttons — shown in an "Available Actions" section
-  actions: [
+  debugActions: [
     DebugAction(
       label: 'Clear cache',
       icon: Icons.delete_outline,
@@ -369,10 +403,12 @@ ActionsModule(
       onTap: () async => await OnboardingService.reset(),
     ),
   ],
+  child: MaterialApp(...),
 )
 ```
 
-Both `actions` and `toggles` are optional — pass only what you need.
+Both `debugActions` and `debugToggles` are optional — the module activates as
+soon as one of them is provided.
 
 ---
 
@@ -381,8 +417,8 @@ Both `actions` and `toggles` are optional — pass only what you need.
 Preview pages for your app's design tokens — colors, typography, components.
 
 ```dart
-DesignSystemModule(
-  sections: [
+DebugPanel(
+  designSystemSections: [
     DesignSystemSection(
       title: 'Colors',
       builder: (context) => MyColorPaletteWidget(),
@@ -392,6 +428,7 @@ DesignSystemModule(
       builder: (context) => MyTypographyWidget(),
     ),
   ],
+  child: MaterialApp(...),
 )
 ```
 
@@ -399,13 +436,18 @@ DesignSystemModule(
 
 ### CustomModule
 
-Fully custom module — supply your own title, icon, and widget. No contract to implement beyond that.
+Fully custom module — supply your own title, icon, and widget. No contract to implement beyond that. Register it via `extraModules`:
 
 ```dart
-CustomModule(
-  title: 'Feature Flags',
-  icon: Icons.flag_outlined,
-  builder: (context) => MyFeatureFlagsWidget(),
+DebugPanel(
+  extraModules: [
+    CustomModule(
+      title: 'Feature Flags',
+      icon: Icons.flag_outlined,
+      builder: (context) => MyFeatureFlagsWidget(),
+    ),
+  ],
+  child: MaterialApp(...),
 )
 ```
 
@@ -434,6 +476,9 @@ class MyModule extends DebugModule {
 }
 ```
 
+Register it like any custom module — `extraModules: [MyModule()]` on
+`DebugPanel`, or in the `modules:` list of a trigger.
+
 ---
 
 ## Accent color
@@ -443,7 +488,6 @@ Override the default blue accent for the FAB and the panel:
 ```dart
 DebugPanel(
   accentColor: const Color(0xFF9B59B6),
-  modules: [...],
   child: MaterialApp(...),
 )
 ```

@@ -1,7 +1,15 @@
 name: ua_debug_view
 description: A fully customizable, modular Flutter debug panel. Plug in only the modules you need.
-version: 0.0.1
+version: 1.0.0
 homepage: https://github.com/useradgents/ua_debug_view
+repository: https://github.com/useradgents/ua_debug_view
+issue_tracker: https://github.com/useradgents/ua_debug_view/issues
+topics:
+  - debug
+  - devtools
+  - debugging
+  - developer-tools
+  - panel
 
 environment:
   sdk: ^3.7.0
@@ -10,11 +18,11 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  package_info_plus: '>=8.3.0 <10.0.0'
-  shared_preferences: ^2.5.2
-  sensors_plus: ^6.1.1
+  package_info_plus: '>=8.3.0 <11.0.0'
+  shared_preferences: ^2.5.5
+  sensors_plus: ^7.1.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^5.0.0
+  flutter_lints: ^6.0.0

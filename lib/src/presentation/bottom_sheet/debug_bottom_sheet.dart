@@ -78,7 +78,7 @@ class _DebugBottomSheetState extends State<DebugBottomSheet> {
     if (settings.name == '/') {
       page = ValueListenableBuilder<List<DebugModule>>(
         valueListenable: widget.modulesNotifier,
-        builder: (_, modules, __) => _DebugMenuRoot(
+        builder: (_, modules, _) => _DebugMenuRoot(
           modules: modules,
           accentColor: widget.accentColor,
           modulesNotifier: widget.modulesNotifier,
@@ -89,7 +89,7 @@ class _DebugBottomSheetState extends State<DebugBottomSheet> {
       final fallback = settings.arguments as DebugModule;
       page = ValueListenableBuilder<List<DebugModule>>(
         valueListenable: widget.modulesNotifier,
-        builder: (ctx, modules, __) {
+        builder: (ctx, modules, _) {
           final fresh = modules.firstWhere(
             (m) => m.title == moduleTitle,
             orElse: () => fallback,
@@ -101,8 +101,8 @@ class _DebugBottomSheetState extends State<DebugBottomSheet> {
 
     return PageRouteBuilder<void>(
       settings: settings,
-      pageBuilder: (_, __, ___) => page,
-      transitionsBuilder: (_, animation, __, child) {
+      pageBuilder: (_, _, _) => page,
+      transitionsBuilder: (_, animation, _, child) {
         return SlideTransition(
           position: Tween<Offset>(
             begin: const Offset(1, 0),
@@ -159,10 +159,10 @@ class _DebugMenuRoot extends StatelessWidget {
                           name: '/$moduleTitle',
                           arguments: module,
                         ),
-                        pageBuilder: (_, __, ___) =>
+                        pageBuilder: (_, _, _) =>
                             ValueListenableBuilder<List<DebugModule>>(
                           valueListenable: modulesNotifier,
-                          builder: (ctx, freshModules, __) {
+                          builder: (ctx, freshModules, _) {
                             final fresh = freshModules.firstWhere(
                               (m) => m.title == moduleTitle,
                               orElse: () => module,
@@ -170,7 +170,7 @@ class _DebugMenuRoot extends StatelessWidget {
                             return fresh.buildPage(ctx);
                           },
                         ),
-                        transitionsBuilder: (_, animation, __, child) {
+                        transitionsBuilder: (_, animation, _, child) {
                           return SlideTransition(
                             position: Tween<Offset>(
                               begin: const Offset(1, 0),

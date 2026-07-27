@@ -123,8 +123,8 @@ class _RequestTile extends StatelessWidget {
     return GestureDetector(
       onTap: () => Navigator.of(context).push(
         PageRouteBuilder<void>(
-          pageBuilder: (_, __, ___) => _RequestDetailPage(request: request),
-          transitionsBuilder: (_, animation, __, child) {
+          pageBuilder: (_, _, _) => _RequestDetailPage(request: request),
+          transitionsBuilder: (_, animation, _, child) {
             return SlideTransition(
               position: Tween<Offset>(
                 begin: const Offset(1, 0),

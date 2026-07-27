@@ -4,7 +4,8 @@ import '../entities/debug_environment.dart';
 /// Abstract contract that every debug module must implement.
 ///
 /// A [DebugModule] represents a self-contained section inside the debug panel.
-/// Register only the modules your app needs via [DebugPanel.modules].
+/// Custom modules are registered via `DebugPanel.extraModules` or the
+/// `modules:` list of a standalone trigger.
 abstract class DebugModule {
   const DebugModule();
 
